@@ -83,7 +83,7 @@ class PriceChecker:
 
 
 def main():
-    with open('config.json', 'r', encoding='utf-8') as f:
+    with open('config.json', 'r') as f:
         config = json.load(f)
 
     price_checker = PriceChecker(config['items'],
