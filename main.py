@@ -16,15 +16,7 @@ class PriceChecker:
         self.sku_ids = sku_ids
         self.wechat_pusher = wechat_pusher
 
-        self.item_names = []
-
-        self.old_item_infos = []
         os.makedirs('data', exist_ok=True)
-        if os.path.exists('data/old_item_infos.json'):
-            with open('data/old_item_infos.json', 'r') as f:
-                self.old_item_infos = json.load(f)
-
-        self.new_item_infos = []
 
         self.session = requests.Session()
 
@@ -51,24 +43,28 @@ class PriceChecker:
         res = self.session.get('https://item-soa.jd.com/getWareBusiness?skuId={}'.format(sku_id))
         return res.json()
 
-    def _save_old_item_infos(self) -> None:
-        with open('data/old_item_infos.json', 'w') as f:
-            json.dump(self.old_item_infos, f)
+    @staticmethod
+    def _get_old_item_info(sku_id: int) -> dict:
+        with open('data/{}.json'.format(sku_id), 'r') as f:
+            old_item_info = json.load(f)
+
+        return old_item_info
+
+    @staticmethod
+    def _save_old_item_info(sku_id: int, item_info: dict) -> None:
+        with open('data/{}.json'.format(sku_id), 'w') as f:
+            json.dump(item_info, f)
 
     def check_infos_update(self) -> None:
-        for i in range(len(self.sku_ids)):
-            self.item_names.append(self._get_item_name(self.sku_ids[i]))
-            self.new_item_infos.append(self._get_item_info(self.sku_ids[i]))
+        for sku_id in self.sku_ids:
+            if not os.path.exists('data/{}.json'.format(sku_id)):
+                item_info = self._get_item_info(sku_id)
+                self._save_old_item_info(sku_id, item_info)
 
-        if not self.old_item_infos:
-            self.old_item_infos = self.new_item_infos
-            self._save_old_item_infos()
-            return
+            old_item_info = self._get_old_item_info(sku_id)
+            new_item_info = self._get_item_info(sku_id)
+            item_name = self._get_item_name(sku_id)
 
-        for sku_id, item_name, old_item_info, new_item_info in zip(self.sku_ids,
-                                                                   self.item_names,
-                                                                   self.old_item_infos,
-                                                                   self.new_item_infos):
             if old_item_info['price']['p'] != new_item_info['price']['p']:
                 logger.info(
                     '{} 价格变动，原价：{}，现价：{}'.format(item_name,
@@ -96,7 +92,7 @@ class PriceChecker:
                             new_activity['value']),
                         url='https://item.jd.com/{}.html'.format(sku_id))
 
-        self._save_old_item_infos()
+            self._save_old_item_info(sku_id, new_item_info)
 
 
 def main():

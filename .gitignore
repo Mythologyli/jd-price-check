@@ -130,4 +130,5 @@ dmypy.json
 
 # Config
 /config.json
-/data/old_item_infos.json
+/data/*.*
+/logs/*.*
