@@ -1,6 +1,6 @@
 import datetime
 import json
-from time import sleep
+import os
 
 import requests
 from typing import List
@@ -11,16 +11,28 @@ from wechatpusher import WeChatPusher
 
 
 class PriceChecker:
-    def __init__(self, sku_ids: List[int], wechat_pusher: WeChatPusher):
+    def __init__(self, sku_ids: List[int], proxy: str, wechat_pusher: WeChatPusher):
         self.sku_ids = sku_ids
         self.wechat_pusher = wechat_pusher
 
         self.item_names = []
 
         self.old_item_infos = []
+        os.makedirs('data', exist_ok=True)
+        if os.path.exists('data/old_item_infos.json'):
+            with open('data/old_item_infos.json', 'r') as f:
+                self.old_item_infos = json.load(f)
+
         self.new_item_infos = []
 
         self.session = requests.Session()
+
+        if proxy != '':
+            self.session.proxies = {
+                'http': proxy,
+                'https': proxy
+            }
+
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
                           'Chrome/101.0.4951.64 Safari/537.36 Edg/101.0.1210.47 '
@@ -40,18 +52,22 @@ class PriceChecker:
 
         return item_info
 
+    def _save_old_item_infos(self) -> None:
+        with open('data/old_item_infos.json', 'w') as f:
+            json.dump(self.old_item_infos, f)
+
     def check_infos_update(self) -> None:
         if not self.old_item_infos:
             for sku_id in self.sku_ids:
                 self.item_names.append(self._get_item_name(sku_id))
-                self.new_item_infos.append(self._get_item_info(sku_id))
+                self.old_item_infos.append(self._get_item_info(sku_id))
 
-            self.old_item_infos = self.new_item_infos
+            self._save_old_item_infos()
 
             return
 
         for i in range(len(self.sku_ids)):
-            self.new_item_infos[i] = self._get_item_info(self.sku_ids[i])
+            self.new_item_infos.append(self._get_item_info(self.sku_ids[i]))
 
         for sku_id, item_name, old_item_info, new_item_info in zip(self.sku_ids,
                                                                    self.item_names,
@@ -79,7 +95,7 @@ class PriceChecker:
                             new_activity['value']),
                         url='https://item.jd.com/{}.html'.format(sku_id))
 
-        self.old_item_infos = self.new_item_infos
+        self._save_old_item_infos()
 
 
 def main():
@@ -87,15 +103,13 @@ def main():
         config = json.load(f)
 
     price_checker = PriceChecker(config['items'],
+                                 config['proxy'],
                                  WeChatPusher(config['push']['corpid'],
                                               config['push']['agentid'],
                                               config['push']['corpsecret']))
 
     price_checker.check_infos_update()
-    while True:
-        price_checker.check_infos_update()
-        print('{} 时完成检查'.format(datetime.datetime.now()))
-        sleep(60)
+    print('{} 时完成检查'.format(datetime.datetime.now()))
 
 
 if __name__ == '__main__':
