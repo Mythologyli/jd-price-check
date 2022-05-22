@@ -56,17 +56,14 @@ class PriceChecker:
             json.dump(self.old_item_infos, f)
 
     def check_infos_update(self) -> None:
-        if not self.old_item_infos:
-            for sku_id in self.sku_ids:
-                self.item_names.append(self._get_item_name(sku_id))
-                self.old_item_infos.append(self._get_item_info(sku_id))
-
-            self._save_old_item_infos()
-
-            return
-
         for i in range(len(self.sku_ids)):
+            self.item_names.append(self._get_item_name(self.sku_ids[i]))
             self.new_item_infos.append(self._get_item_info(self.sku_ids[i]))
+
+        if not self.old_item_infos:
+            self.old_item_infos = self.new_item_infos
+            self._save_old_item_infos()
+            return
 
         for sku_id, item_name, old_item_info, new_item_info in zip(self.sku_ids,
                                                                    self.item_names,
