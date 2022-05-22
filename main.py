@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 
+from loguru import logger
 import requests
 from typing import List
 
@@ -74,7 +75,10 @@ class PriceChecker:
                                                                    self.old_item_infos,
                                                                    self.new_item_infos):
             if old_item_info['price']['p'] != new_item_info['price']['p']:
-                print('{} 价格变动，原价：{}，现价：{}'.format(item_name, old_item_info['price']['p'], new_item_info['price']['p']))
+                logger.info(
+                    '{} 价格变动，原价：{}，现价：{}'.format(item_name,
+                                                 old_item_info['price']['p'],
+                                                 new_item_info['price']['p']))
                 self.wechat_pusher.send(
                     title='京东价格变动',
                     description='{} 价格变动，原价：{}，现价：{}'.format(
@@ -86,7 +90,9 @@ class PriceChecker:
             for old_activity, new_activity in zip(old_item_info['promotion']['activity'],
                                                   new_item_info['promotion']['activity']):
                 if old_activity['value'] != new_activity['value']:
-                    print('{} 促销信息变动，原促销信息：{}，现促销信息：{}'.format(item_name, old_activity['value'], new_activity['value']))
+                    logger.info('{} 促销信息变动，原促销信息：{}，现促销信息：{}'.format(item_name,
+                                                                     old_activity['value'],
+                                                                     new_activity['value']))
                     self.wechat_pusher.send(
                         title='京东促销信息变动',
                         description='{} 促销信息变动，原促销信息：{}，现促销信息：{}'.format(
@@ -99,6 +105,12 @@ class PriceChecker:
 
 
 def main():
+    os.makedirs('logs', exist_ok=True)
+    logger.add('logs/{time:YYYY-MM-DD}.log',
+               rotation='0:00',
+               retention='30 days',
+               level='DEBUG')
+
     with open('config.json', 'r') as f:
         config = json.load(f)
 
@@ -109,7 +121,7 @@ def main():
                                               config['push']['corpsecret']))
 
     price_checker.check_infos_update()
-    print('{} 时完成检查'.format(datetime.datetime.now()))
+    logger.info('{} 时完成检查'.format(datetime.datetime.now()))
 
 
 if __name__ == '__main__':
