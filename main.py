@@ -49,9 +49,7 @@ class PriceChecker:
 
     def _get_item_info(self, sku_id: int) -> dict:
         res = self.session.get('https://item-soa.jd.com/getWareBusiness?skuId={}'.format(sku_id))
-        item_info = json.loads(res.text)
-
-        return item_info
+        return res.json()
 
     def _save_old_item_infos(self) -> None:
         with open('data/old_item_infos.json', 'w') as f:
