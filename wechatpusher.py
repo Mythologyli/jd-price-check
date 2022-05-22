@@ -47,7 +47,7 @@ class WeChatPusher:
             description = title
 
         if url == '':
-            url = 'https://github.com/Mythologyli/WeChat-Push'
+            url = 'https://github.com/Mythologyli/WeChatPusher'
 
         if self.access_token == '':
             res_get = self._get_token()  # 更新 access_token
